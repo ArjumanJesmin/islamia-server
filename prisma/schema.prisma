@@ -1,15 +1,472 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+// School Information
+model School {
+  id          String  @id @default(cuid())
+  name        String  @default("ইসলামিয়া সরকারি প্রাথমিক বিদ্যালয়")
+  motto       String  @default("জ্ঞানের আলোয়ে উদ্ভাসিত")
+  established String  @default("১৯৭২")
+  description String?
+  logo        String? @default("/islamia_logo.svg")
+  address     String  @default("কলেজ রোড, সাতক্ষীরা সদর, সাতক্ষীরা, বাংলাদেশ")
+  phone       String  @default("+৮৮০ ১২৩৪-৫৬৭৮৯")
+  email       String  @default("islamiagps@gmail.com")
+  website     String?
+
+  admissionStartMonth Int @default(1) // January
+  admissionEndMonth   Int @default(2) // February
+  admissionStartDay   Int @default(1) // 1st January
+  admissionEndDay     Int @default(28) // 28th February
+
+  // Relations
+  announcements  Announcement[]
+  classes        Class[]
+  users          User[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  Admin     Admin[]
+
+  @@map("schools")
+}
+
+// User Authentication & Profiles
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  role          UserRole  @default(PARENT)
+  isActive      Boolean   @default(true)
+  emailVerified Boolean   @default(false)
+  lastLogin     DateTime?
+
+  // Profile
+  profile Profile?
+
+  // Relations
+  school   School?   @relation(fields: [schoolId], references: [id])
+  schoolId String?
+  students Student[] // Parents can have multiple students
+
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  Announcement  Announcement[]
+  Event         Event[]
+  Teacher       Teacher[]
+  AdmissionForm AdmissionForm[]
+  Attendance    Attendance[]
+  Admin         Admin?
+
+  @@map("users")
+}
+
+model Profile {
+  id          String    @id @default(cuid())
+  name        String
+  phone       String?
+  address     String?
+  dateOfBirth DateTime?
+  gender      Gender?
+  photo       String?
+
+  // Relations
+  user   User   @relation(fields: [userId], references: [id])
+  userId String @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("profiles")
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  TEACHER
+  PARENT
+  STUDENT
+}
+
+// Admin Specific Model
+model Admin {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  user      User     @relation(fields: [email], references: [email])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  School    School?  @relation(fields: [schoolId], references: [id])
+  schoolId  String?
+
+  @@map("admins")
+}
+
+// Announcements
+model Announcement {
+  id          String               @id @default(cuid())
+  title       String
+  description String
+  content     String?
+  status      AnnouncementStatus   @default(ACTIVE)
+  category    AnnouncementCategory @default(GENERAL)
+  image       String?
+  startDate   DateTime?
+  endDate     DateTime?
+  isPublished Boolean              @default(false)
+
+  // Relations
+  school   School @relation(fields: [schoolId], references: [id])
+  schoolId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  User      User?    @relation(fields: [userId], references: [id])
+  userId    String?
+
+  @@map("announcements")
+}
+
+enum AnnouncementStatus {
+  ACTIVE
+  UPCOMING
+  ENDED
+  DRAFT
+}
+
+enum AnnouncementCategory {
+  GENERAL
+  EXAM
+  HOLIDAY
+  EVENT
+  URGENT
+  ADMISSION
+}
+
+// Events
+model Event {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  content     String?
+  type        EventType @default(ACADEMIC)
+  date        DateTime
+  endDate     DateTime?
+  location    String?
+  image       String?
+  isPublished Boolean   @default(false)
+
+  // Organizer
+  organizer   User?   @relation(fields: [organizerId], references: [id])
+  organizerId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("events")
+}
+
+enum EventType {
+  ACADEMIC
+  CULTURAL
+  SPORTS
+  HOLIDAY
+  CEREMONY
+  ADMISSION
+  MEETING
+  OTHER
+}
+
+// Teachers
+model Teacher {
+  id            String  @id @default(cuid())
+  name          String
+  position      String
+  qualification String
+  bio           String?
+  image         String?
+  email         String?
+  phone         String?
+  displayOrder  Int     @default(0)
+  isActive      Boolean @default(true)
+
+  // User Account (if teacher has login)
+  user   User?   @relation(fields: [userId], references: [id])
+  userId String?
+
+  classes  Class[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("teachers")
+}
+
+// Academic Calendar
+model AcademicTerm {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  startDate   DateTime
+  endDate     DateTime
+  color       String?
+
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("academic_terms")
+}
+
+// Student Information (Free Government School)
+model Student {
+  id          String      @id @default(cuid())
+  studentId   String      @unique
+  name        String
+  fatherName  String
+  motherName  String
+  dateOfBirth DateTime
+  gender      Gender
+  bloodGroup  BloodGroup?
+  religion    Religion?
+  address     String
+  phone       String?
+  email       String?
+
+  admissionDate   DateTime
+  admissionStatus AdmissionStatus @default(APPLIED)
+  admissionYear   Int
+
+  // Documents (Free School - No Fees)
+  birthCertificate String?
+  photo            String?
+  previousSchoolTC String?
+
+  // Academic Information
+  class    Class   @relation(fields: [classId], references: [id])
+  classId  String
+  section  String?
+  isActive Boolean @default(true)
+
+  // User Account (for older students)
+  user   User?   @relation(fields: [userId], references: [id])
+  userId String?
+
+
+  attendances Attendance[]
+  results     Result[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("students")
+}
+
+// Admission Form Model
+model AdmissionForm {
+  id           String    @id @default(cuid())
+  formNumber   String    @unique
+  studentName  String
+  fatherName   String
+  motherName   String
+  dateOfBirth  DateTime
+  gender       Gender
+  className    ClassName
+  address      String
+  phone        String
+  appliedClass String
+
+  // Status Tracking
+  status        AdmissionFormStatus @default(PENDING)
+  submittedDate DateTime
+  approvedDate  DateTime?
+  remarks       String?
+
+  // Documents
+  birthCertificate String?
+  photo            String?
+
+  // Submitted by (if online)
+  submittedBy   User?   @relation(fields: [submittedById], references: [id])
+  submittedById String?
+
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("admission_forms")
+}
+
+enum ClassName {
+  FIRST
+  SECOND
+  THIRD
+  FOURTH
+  FIFTH
+}
+
+// Class Information
+model Class {
+  id        String  @id @default(cuid())
+  className String  @unique
+  grade     String
+  section   String?
+  capacity  Int     @default(40)
+  room      String?
+
+  // Relations
+  school    School    @relation(fields: [schoolId], references: [id])
+  schoolId  String
+  students  Student[]
+  teacher   Teacher?  @relation(fields: [teacherId], references: [id])
+  teacherId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("classes")
+}
+
+// Attendance System
+model Attendance {
+  id      String           @id @default(cuid())
+  date    DateTime
+  status  AttendanceStatus @default(PRESENT)
+  remarks String?
+
+  // Marked by
+  markedBy   User?   @relation(fields: [markedById], references: [id])
+  markedById String?
+
+  // Relations
+  student   Student @relation(fields: [studentId], references: [id])
+  studentId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("attendances")
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  HOLIDAY
+  SICK_LEAVE
+}
+
+// Result System
+model Result {
+  id         String   @id @default(cuid())
+  examType   ExamType
+  subject    String
+  marks      Int
+  totalMarks Int      @default(100)
+  grade      String?
+  remarks    String?
+
+  // Relations
+  student   Student @relation(fields: [studentId], references: [id])
+  studentId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("results")
+}
+
+enum ExamType {
+  FIRST_TERM
+  SECOND_TERM
+  ANNUAL
+  CLASS_TEST
+  ASSIGNMENT
+  PROJECT
+}
+
+// Enums for Student
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum BloodGroup {
+  A_POSITIVE
+  A_NEGATIVE
+  B_POSITIVE
+  B_NEGATIVE
+  AB_POSITIVE
+  AB_NEGATIVE
+  O_POSITIVE
+  O_NEGATIVE
+}
+
+enum Religion {
+  ISLAM
+  HINDUISM
+  CHRISTIANITY
+  BUDDHISM
+  OTHER
+}
+
+// Admission Status Enums
+enum AdmissionStatus {
+  APPLIED
+  DOCUMENT_VERIFIED
+  APPROVED
+  REJECTED
+  ENROLLED
+  WAITLIST
+}
+
+enum AdmissionFormStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  WAITLIST
+}
+
+// Email Subscriptions
+model EmailSubscription {
+  id       String  @id @default(cuid())
+  email    String  @unique
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("email_subscriptions")
+}
+
+// Contact Messages
+model ContactMessage {
+  id      String        @id @default(cuid())
+  name    String
+  email   String
+  phone   String?
+  subject String
+  message String
+  status  MessageStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("contact_messages")
+}
+
+enum MessageStatus {
+  PENDING
+  READ
+  REPLIED
+  RESOLVED
+  SPAM
 }
