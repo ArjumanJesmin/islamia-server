@@ -7,7 +7,9 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// School Information
+//
+// 📘 School Information
+//
 model School {
   id          String  @id @default(cuid())
   name        String  @default("ইসলামিয়া সরকারি প্রাথমিক বিদ্যালয়")
@@ -20,24 +22,26 @@ model School {
   email       String  @default("islamiagps@gmail.com")
   website     String?
 
-  admissionStartMonth Int @default(1) // January
-  admissionEndMonth   Int @default(2) // February
-  admissionStartDay   Int @default(1) // 1st January
-  admissionEndDay     Int @default(28) // 28th February
+  admissionStartMonth Int @default(1)
+  admissionEndMonth   Int @default(2)
+  admissionStartDay   Int @default(1)
+  admissionEndDay     Int @default(28)
 
   // Relations
-  announcements  Announcement[]
-  classes        Class[]
-  users          User[]
+  announcements Announcement[]
+  classes       Class[]
+  users         User[]
+  admins        Admin[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  Admin     Admin[]
 
   @@map("schools")
 }
 
-// User Authentication & Profiles
+//
+// 👤 User Authentication & Profiles
+//
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
@@ -53,16 +57,17 @@ model User {
   // Relations
   school   School?   @relation(fields: [schoolId], references: [id])
   schoolId String?
-  students Student[] // Parents can have multiple students
+  students Student[]
+  admin    Admin?
 
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
   Announcement  Announcement[]
   Event         Event[]
   Teacher       Teacher[]
   AdmissionForm AdmissionForm[]
   Attendance    Attendance[]
-  Admin         Admin?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("users")
 }
@@ -94,21 +99,26 @@ enum UserRole {
   STUDENT
 }
 
-// Admin Specific Model
+//
+// 🧑‍💼 Admin Model
+//
 model Admin {
   id        String   @id @default(cuid())
   name      String
   email     String   @unique
-  user      User     @relation(fields: [email], references: [email])
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  schoolId  String?
+  school    School?  @relation(fields: [schoolId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  School    School?  @relation(fields: [schoolId], references: [id])
-  schoolId  String?
 
   @@map("admins")
 }
 
-// Announcements
+//
+// 📢 Announcements
+//
 model Announcement {
   id          String               @id @default(cuid())
   title       String
@@ -124,11 +134,11 @@ model Announcement {
   // Relations
   school   School @relation(fields: [schoolId], references: [id])
   schoolId String
+  user     User?  @relation(fields: [userId], references: [id])
+  userId   String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  User      User?    @relation(fields: [userId], references: [id])
-  userId    String?
 
   @@map("announcements")
 }
@@ -149,7 +159,9 @@ enum AnnouncementCategory {
   ADMISSION
 }
 
-// Events
+//
+// 🎉 Events
+//
 model Event {
   id          String    @id @default(cuid())
   title       String
@@ -162,7 +174,6 @@ model Event {
   image       String?
   isPublished Boolean   @default(false)
 
-  // Organizer
   organizer   User?   @relation(fields: [organizerId], references: [id])
   organizerId String?
 
@@ -183,7 +194,9 @@ enum EventType {
   OTHER
 }
 
-// Teachers
+//
+// 👩‍🏫 Teachers
+//
 model Teacher {
   id            String  @id @default(cuid())
   name          String
@@ -196,11 +209,10 @@ model Teacher {
   displayOrder  Int     @default(0)
   isActive      Boolean @default(true)
 
-  // User Account (if teacher has login)
   user   User?   @relation(fields: [userId], references: [id])
   userId String?
 
-  classes  Class[]
+  classes Class[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -208,7 +220,9 @@ model Teacher {
   @@map("teachers")
 }
 
-// Academic Calendar
+//
+// 📅 Academic Term
+//
 model AcademicTerm {
   id          String   @id @default(cuid())
   title       String
@@ -217,14 +231,15 @@ model AcademicTerm {
   endDate     DateTime
   color       String?
 
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@map("academic_terms")
 }
 
-// Student Information (Free Government School)
+//
+// 🎓 Students
+//
 model Student {
   id          String      @id @default(cuid())
   studentId   String      @unique
@@ -243,21 +258,17 @@ model Student {
   admissionStatus AdmissionStatus @default(APPLIED)
   admissionYear   Int
 
-  // Documents (Free School - No Fees)
   birthCertificate String?
   photo            String?
   previousSchoolTC String?
 
-  // Academic Information
   class    Class   @relation(fields: [classId], references: [id])
   classId  String
   section  String?
   isActive Boolean @default(true)
 
-  // User Account (for older students)
   user   User?   @relation(fields: [userId], references: [id])
   userId String?
-
 
   attendances Attendance[]
   results     Result[]
@@ -268,7 +279,9 @@ model Student {
   @@map("students")
 }
 
-// Admission Form Model
+//
+// 📝 Admission Form
+//
 model AdmissionForm {
   id           String    @id @default(cuid())
   formNumber   String    @unique
@@ -281,21 +294,14 @@ model AdmissionForm {
   address      String
   phone        String
   appliedClass String
-
-  // Status Tracking
   status        AdmissionFormStatus @default(PENDING)
   submittedDate DateTime
   approvedDate  DateTime?
   remarks       String?
-
-  // Documents
   birthCertificate String?
   photo            String?
-
-  // Submitted by (if online)
   submittedBy   User?   @relation(fields: [submittedById], references: [id])
   submittedById String?
-
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -311,7 +317,9 @@ enum ClassName {
   FIFTH
 }
 
-// Class Information
+//
+// 🏫 Class Model
+//
 model Class {
   id        String  @id @default(cuid())
   className String  @unique
@@ -320,7 +328,6 @@ model Class {
   capacity  Int     @default(40)
   room      String?
 
-  // Relations
   school    School    @relation(fields: [schoolId], references: [id])
   schoolId  String
   students  Student[]
@@ -333,20 +340,19 @@ model Class {
   @@map("classes")
 }
 
-// Attendance System
+//
+// 🕒 Attendance
+//
 model Attendance {
   id      String           @id @default(cuid())
   date    DateTime
   status  AttendanceStatus @default(PRESENT)
   remarks String?
 
-  // Marked by
   markedBy   User?   @relation(fields: [markedById], references: [id])
   markedById String?
-
-  // Relations
-  student   Student @relation(fields: [studentId], references: [id])
-  studentId String
+  student    Student @relation(fields: [studentId], references: [id])
+  studentId  String
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -362,7 +368,9 @@ enum AttendanceStatus {
   SICK_LEAVE
 }
 
-// Result System
+//
+// 📊 Results
+//
 model Result {
   id         String   @id @default(cuid())
   examType   ExamType
@@ -371,10 +379,8 @@ model Result {
   totalMarks Int      @default(100)
   grade      String?
   remarks    String?
-
-  // Relations
-  student   Student @relation(fields: [studentId], references: [id])
-  studentId String
+  student    Student @relation(fields: [studentId], references: [id])
+  studentId  String
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -391,7 +397,9 @@ enum ExamType {
   PROJECT
 }
 
-// Enums for Student
+//
+// 🔠 Enums
+//
 enum Gender {
   MALE
   FEMALE
@@ -417,7 +425,6 @@ enum Religion {
   OTHER
 }
 
-// Admission Status Enums
 enum AdmissionStatus {
   APPLIED
   DOCUMENT_VERIFIED
@@ -435,7 +442,9 @@ enum AdmissionFormStatus {
   WAITLIST
 }
 
-// Email Subscriptions
+//
+// 📧 Email Subscription
+//
 model EmailSubscription {
   id       String  @id @default(cuid())
   email    String  @unique
@@ -447,7 +456,9 @@ model EmailSubscription {
   @@map("email_subscriptions")
 }
 
-// Contact Messages
+//
+// 📬 Contact Messages
+//
 model ContactMessage {
   id      String        @id @default(cuid())
   name    String

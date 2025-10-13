@@ -96,9 +96,10 @@ CREATE TABLE "admins" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "email" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "schoolId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
-    "schoolId" TEXT,
 
     CONSTRAINT "admins_pkey" PRIMARY KEY ("id")
 );
@@ -116,9 +117,9 @@ CREATE TABLE "announcements" (
     "endDate" TIMESTAMP(3),
     "isPublished" BOOLEAN NOT NULL DEFAULT false,
     "schoolId" TEXT NOT NULL,
+    "userId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
-    "userId" TEXT,
 
     CONSTRAINT "announcements_pkey" PRIMARY KEY ("id")
 );
@@ -313,6 +314,9 @@ CREATE UNIQUE INDEX "profiles_userId_key" ON "profiles"("userId");
 CREATE UNIQUE INDEX "admins_email_key" ON "admins"("email");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "admins_userId_key" ON "admins"("userId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "students_studentId_key" ON "students"("studentId");
 
 -- CreateIndex
@@ -331,7 +335,7 @@ ALTER TABLE "users" ADD CONSTRAINT "users_schoolId_fkey" FOREIGN KEY ("schoolId"
 ALTER TABLE "profiles" ADD CONSTRAINT "profiles_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "admins" ADD CONSTRAINT "admins_email_fkey" FOREIGN KEY ("email") REFERENCES "users"("email") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "admins" ADD CONSTRAINT "admins_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "admins" ADD CONSTRAINT "admins_schoolId_fkey" FOREIGN KEY ("schoolId") REFERENCES "schools"("id") ON DELETE SET NULL ON UPDATE CASCADE;
