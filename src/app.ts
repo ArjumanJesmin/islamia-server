@@ -20,7 +20,7 @@ app.use(cookieParser());
 
 app.get("/", (req: Request, res: Response) => {
   res.send({
-    message: " Flat share Sever..",
+    message: " School Management Sever..",
   });
 });
 
